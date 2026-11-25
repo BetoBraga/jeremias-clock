@@ -1,0 +1,15 @@
+settings.json
+*.lnk
+*.log
+.env
+.env.*
+.vs/
+.vscode/
+.idea/
+__pycache__/
+bin/
+obj/
+dist/
+*.zip
+.DS_Store
+Thumbs.db
