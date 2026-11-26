@@ -16,6 +16,14 @@ A compact Windows desktop clock for Brazil (São Paulo) and Ireland (Dublin), ac
 - Local blink animation; optional experimental docking of the native ChatGPT desktop pet, with a local fallback.
 - Local settings; no network requests, accounts, telemetry or external runtime dependencies.
 
+## Pick a review path
+
+| Goal | Entry point | What it does |
+|---|---|---|
+| Use the clock | [Start.cmd](Start.cmd) | Starts the normal widget. The startup shortcut and native pet link are opt-in. |
+| Try the widget without touching everyday settings | [Review.cmd](Review.cmd) | Opens a separate review instance with its own settings; startup and native pet linking are unavailable. |
+| Validate without showing the widget | [Validate.ps1](Validate.ps1) | Checks PowerShell parsing, C# helper compilation, WPF markup, and time-zone and Time Travel behavior. |
+
 ## Quick start
 
 1. Download or clone the repository and extract it to a permanent folder.
