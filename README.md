@@ -15,6 +15,7 @@ A compact Windows desktop clock for Brazil (São Paulo) and Ireland (Dublin), ac
 - Best-effort fullscreen avoidance on the widget's monitor.
 - Local blink animation; optional experimental docking of the native ChatGPT desktop pet, with a local fallback.
 - Local settings; no network requests, accounts, telemetry or external runtime dependencies.
+- An offline Today panel for meeting entries, focus blocks and searchable notes.
 
 ## Pick a review path
 
@@ -43,6 +44,7 @@ The launcher applies `ExecutionPolicy Bypass` to its own process only, not the s
 | Diamond | Toggle always-on-top |
 | Lock | Toggle movement lock |
 | Bottom-right grip | Resize proportionally |
+| Right-click → Today | Open the local agenda and notes |
 | Right-click | Presets, reset position, startup, fullscreen and pet settings |
 
 The simulated instant is frozen; it never changes the system clock. Dates and offsets are computed for that instant, including midnight and DST boundaries.
@@ -64,6 +66,8 @@ Run `Validate.cmd` or `powershell.exe -NoProfile -STA -File .\Validate.ps1` on W
 See [contributing](CONTRIBUTING.md), [agent instructions](AGENTS.md), [design standards](docs/DESIGN.md), [test plan](docs/TESTING.md) and [roadmap](docs/ROADMAP.md).
 
 Settings are stored under `%LOCALAPPDATA%\JeremiasWorldClock\settings.json`. To uninstall, disable **Start with Windows**, close the widget, and remove the project folder. Optionally remove the local settings folder. If the widget was deleted first, remove its shortcut from `shell:startup`.
+
+Today data is stored in `productivity.json` beside the settings, with its last valid backup in `productivity.json.bak`. `Review.cmd` uses its own copy under `JeremiasWorldClock.Review`.
 
 ## Icon
 

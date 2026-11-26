@@ -32,5 +32,22 @@ try {
     if ((Get-TravelOffset 16) -ne 15 -or (Get-TravelOffset -1500) -ne -1440 -or (Get-TravelOffset 1500) -ne 1440) { throw 'Preview step or bound mismatch' }
     if ((Get-TravelRemaining ([TimeSpan]::FromSeconds(11))) -ne 1 -or (Get-TravelRemaining ([TimeSpan]::FromSeconds(12))) -ne 0) { throw 'Preview idle reset mismatch' }
     Write-Host 'OK: Time Travel anchor, bounds, idle countdown and midnight'
+    $null = [System.Management.Automation.Language.Parser]::ParseFile((Join-Path $PSScriptRoot 'TodayPanel.ps1'), [ref]$tokens, [ref]$errors)
+    if ($errors.Count) { throw ($errors | Out-String) }
+    & (Join-Path $PSScriptRoot 'tests\Validate-Productivity.ps1')
+    & (Join-Path $PSScriptRoot 'tests\Validate-Calendar.ps1')
+    $activityFile = Join-Path $PSScriptRoot 'ActivityPanel.ps1'
+    $null = [System.Management.Automation.Language.Parser]::ParseFile($activityFile, [ref]$tokens, [ref]$errors)
+    if ($errors.Count) { throw ($errors | Out-String) }
+    $activity = [regex]::Match((Get-Content -Raw $activityFile), '(?s)\[xml\]\$markup = @"\r?\n(.*?)\r?\n"@')
+    if (-not $activity.Success) { throw 'Activity XAML not found.' }
+    $activityReader = [System.Xml.XmlNodeReader]::new([xml]$activity.Groups[1].Value)
+    try { $activityWindow = [Windows.Markup.XamlReader]::Load($activityReader) }
+    finally { $activityReader.Close() }
+    if (-not $activityWindow.FindName('CancelRun')) { throw 'Activity cancellation control missing.' }
+    & (Join-Path $PSScriptRoot 'tests\Validate-Activity.ps1')
+    foreach ($test in 'Validate-MeetingBrief.ps1','Validate-CalendarPilot.ps1','Validate-OpenClawPilot.ps1','Validate-OpenBotFixture.ps1','Validate-CalendarWritePolicy.ps1') {
+        & (Join-Path $PSScriptRoot ("tests/" + $test))
+    }
     Write-Host 'Validation completed. GUI interaction still requires manual testing.'
 } catch { Write-Host $_.Exception.Message -ForegroundColor Red; exit 1 }

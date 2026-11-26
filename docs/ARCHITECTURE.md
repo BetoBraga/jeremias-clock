@@ -27,6 +27,29 @@ The single-instance mutex is session-local. WPF uses a transparent borderless wi
 
 Fullscreen detection compares foreground-window geometry to the widget monitor bounds and excludes ordinary captioned maximized windows. Suppression is best-effort and must restore prior preferences after fullscreen ends. It is not a game integration. Native pet docking inspects visible, small, eligible ChatGPT/Codex overlay windows, links by cursor selection, and may reconnect only to a uniquely identified pet signature. The helper moves the selected window without resizing, reparenting, taking focus or changing its Z order. A failed association must leave local animation available. Never claim official pet support.
 
+## Local productivity
+
+The Today panel opens on demand from the clock menu. `TodayPanel.ps1` owns the local WPF editor and uses the system clock and local time zone. `ProductivityStore.ps1` validates notes and timed entries, stores UTC instants in a separate versioned JSON file and replaces the file atomically. A valid backup can recover data after corruption. The review instance uses its own app-data directory.
+
+## Optional Gateway boundary
+
+The OpenClaw integration is an offline qualification harness, not a runtime dependency or a connection from the desktop UI. It restricts a proposed meeting-brief run to explicitly selected fields, models exact run/session identity, and keeps unknown outcomes distinct from completed ones. Only an authorized, dedicated pilot can qualify a live transport. See [OpenClaw qualification](../integrations/openclaw/README.md).
+
 ## Direction for future refactoring
 
 Extract pure time calculations, settings validation/persistence, and the Win32 adapter into independently testable modules only as needed. Keep the presentation layer responsible for binding and events. Preserve launch compatibility and the existing settings location; document breaking changes as ADRs. Avoid adding infrastructure or AI runtime dependencies to this offline utility.
+
+
+## Optional Google Calendar snapshot
+
+`Sync-Calendar.ps1` is the explicit opt-in boundary. It issues only the [events.list GET request](https://developers.google.com/workspace/calendar/api/v3/reference/events/list) for the exact supplied calendar ID. It never enumerates calendars or writes to Google. Use a short-lived OAuth token issued for `https://www.googleapis.com/auth/calendar.events.readonly` against a dedicated test account/calendar. There is no built-in sign-in, automatic refresh, or token persistence.
+
+The import expands timed recurring instances from yesterday through the next seven days, following pages before replacing the cache atomically. It skips all-day and cancelled instances. Provider event IDs and ETags identify single events and source revisions. For recurring instances, `recurringEventId` plus the original UTC start identify the occurrence even if its scheduled time moves. Offset-free dates are not guessed. An incomplete refresh never partially replaces a snapshot; offline fallback uses only the same calendar. Cache contents are local unencrypted calendar ID, titles, timestamps, IDs and revisions; they may contain personal data. The regular and review profiles are separate. Today only reads the cache when opened and never makes a network request.
+
+## Meeting brief contract (offline fixture)
+
+Meeting briefs are review-only drafts tied to a single meeting revision and up to eight explicitly selected notes. New-JeremiasMeetingBriefRequest separates the pre-dispatch provider/scope/deadline/budget preview from the versioned payload. The host must not dispatch until it shows the preview and receives confirmation for that exact scope.
+
+MeetingBrief.ps1 validates the response envelope, exact citations, zero tools, independently reported token usage and deadline. The host must also give it the current persisted meeting and allowed notes, not the original payload. The scope includes a digest of the selected source data so edits or revoked access invalidate a previous request. Only accepted drafts can be written to Activity with review-ready status and plain-text source references. This contract does not enable a live provider, guarantee semantic correctness of a model response, or grant permissions to act on its text. Integration with a live provider must enforce the same deadline and budgets at the transport boundary.
+
+See [integration evidence and qualification gates](INTEGRATION-STATUS.md) for the status of each pilot boundary.
