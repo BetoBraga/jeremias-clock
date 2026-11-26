@@ -1,0 +1,6 @@
+{"items":[
+{"id":"series_a","recurringEventId":"series","originalStartTime":{"dateTime":"2026-10-25T01:30:00+01:00"},"start":{"dateTime":"2026-10-25T02:00:00+00:00"},"end":{"dateTime":"2026-10-25T02:30:00+00:00"},"etag":"rev2","summary":"Moved occurrence"},
+{"id":"series_a","recurringEventId":"series","originalStartTime":{"dateTime":"2026-10-25T01:30:00+01:00"},"start":{"dateTime":"2026-10-25T02:00:00+00:00"},"end":{"dateTime":"2026-10-25T02:30:00+00:00"},"etag":"rev2","summary":"Moved occurrence"},
+{"id":"series_b","recurringEventId":"series","originalStartTime":{"dateTime":"2026-10-25T01:30:00+00:00"},"start":{"dateTime":"2026-10-25T01:30:00+00:00"},"end":{"dateTime":"2026-10-25T02:00:00+00:00"},"etag":"rev3","summary":"Repeated hour"},
+{"id":"all-day","start":{"date":"2026-10-25"},"end":{"date":"2026-10-26"},"etag":"rev4","summary":"All day"}
+]}
