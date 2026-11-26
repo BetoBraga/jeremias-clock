@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Updated the README with the maintainer-provided Jeremias illustration.
+
 
 
 - Added an optional, explicitly refreshed read-only Google Calendar snapshot for Today.
