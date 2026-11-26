@@ -1,12 +1,17 @@
-﻿$ErrorActionPreference = 'Stop'
+﻿param([switch]$Review)
+
+$ErrorActionPreference = 'Stop'
 Add-Type -AssemblyName PresentationFramework, PresentationCore, WindowsBase
-$mutex = [System.Threading.Mutex]::new($false, 'Local\JeremiasWorldClock')
+$mutexName = if ($Review) { 'Local\JeremiasWorldClock.Review' } else { 'Local\JeremiasWorldClock' }
+$mutex = [System.Threading.Mutex]::new($false, $mutexName)
 if (-not $mutex.WaitOne(0)) { $mutex.Dispose(); return }
 try {
 $root = $PSScriptRoot
+. (Join-Path $root 'ClockModel.ps1')
 $bridgeAvailable = $false
 try { Add-Type -Path (Join-Path $root 'WindowBridge.cs'); $bridgeAvailable = $true } catch { $bridgeAvailable = $false }
-$stateDir = Join-Path $env:LOCALAPPDATA 'JeremiasWorldClock'
+$stateFolder = if ($Review) { 'JeremiasWorldClock.Review' } else { 'JeremiasWorldClock' }
+$stateDir = Join-Path $env:LOCALAPPDATA $stateFolder
 $null = New-Item -ItemType Directory -Force -Path $stateDir
 $statePath = Join-Path $stateDir 'settings.json'
 $startupPath = Join-Path ([Environment]::GetFolderPath('Startup')) 'Jeremias World Clock.lnk'
@@ -92,6 +97,8 @@ function Load-Bitmap([string]$name) {
 }
 $normal = Load-Bitmap 'jeremias.png'; $blink = Load-Bitmap 'jeremias-blink.png'
 $controls.Mascot.Source = $normal
+$mascotOffset = [Windows.Media.TranslateTransform]::new()
+$controls.Mascot.RenderTransform = $mascotOffset
 function Format-Offset([TimeSpan]$offset) {
     if ($offset.TotalMinutes -eq 0) { return 'UTC+0' }
     $sign = if ($offset.TotalMinutes -lt 0) { '-' } else { '+' }
@@ -99,36 +106,36 @@ function Format-Offset([TimeSpan]$offset) {
     if ($abs.Minutes -eq 0) { return ('UTC{0}{1}' -f $sign,$abs.Hours) }
     return ('UTC{0}{1}:{2:00}' -f $sign,$abs.Hours,$abs.Minutes)
 }
-$travel = @{Active=$false; Anchor=[DateTimeOffset]::UtcNow; Last=[DateTimeOffset]::UtcNow; Suppress=$false; Timeout=12}
+$travel = @{Active=$false; Anchor=[DateTimeOffset]::UtcNow; Idle=[Diagnostics.Stopwatch]::new(); Suppress=$false}
 $desktop = @{Pin=$true; Locked=$false; Fullscreen=$true; Hidden=$false; Hwnd=[IntPtr]::Zero; PetHandle=[IntPtr]::Zero; PetPid=0; Signature=$null; PairUntil=$null; PairNotice=''; NoticeUntil=[DateTimeOffset]::MinValue; LastDock=''; LastScan=[DateTimeOffset]::MinValue}
 function Start-Travel {
     if (-not $travel.Active) {
-        $local = [TimeZoneInfo]::ConvertTime([DateTimeOffset]::UtcNow,$brZone)
-        $wall = $local.DateTime.AddMinutes(-($local.Minute % 15)).AddSeconds(-$local.Second).AddTicks(-($local.Ticks % [TimeSpan]::TicksPerSecond))
-        $travel.Anchor = ([DateTimeOffset]::new($wall,$local.Offset)).ToUniversalTime()
+        $travel.Anchor = Get-TravelAnchor ([DateTimeOffset]::UtcNow) $brZone
         $travel.Active = $true
     }
-    $travel.Last = [DateTimeOffset]::UtcNow
+    $travel.Idle.Restart()
 }
 function Reset-Travel {
+    $travel.Idle.Reset()
     $travel.Suppress = $true; $travel.Active = $false; $controls.TravelSlider.Value = 0; $travel.Suppress = $false
 }
 function Update-Clocks {
     $now = [DateTimeOffset]::UtcNow
     if ($travel.Active) {
-        if ($controls.TravelSlider.IsMouseCaptureWithin -or ($controls.TravelSlider.IsMouseOver -and [Windows.Input.Mouse]::LeftButton -eq 'Pressed')) { $travel.Last = $now }
-        if (($now - $travel.Last).TotalSeconds -ge $travel.Timeout) { Reset-Travel }
+        if ($controls.TravelSlider.IsMouseCaptureWithin -or ($controls.TravelSlider.IsMouseOver -and [Windows.Input.Mouse]::LeftButton -eq 'Pressed')) { $travel.Idle.Restart() }
+        if ((Get-TravelRemaining $travel.Idle.Elapsed) -eq 0) { Reset-Travel }
     }
-    $utc = if ($travel.Active) { $travel.Anchor.AddMinutes($controls.TravelSlider.Value) } else { $now }
+    $utc = if ($travel.Active) { $travel.Anchor.AddMinutes((Get-TravelOffset $controls.TravelSlider.Value)) } else { $now }
     $accent = if ($travel.Active) { '#A1F1A3' } else { '#F2F5F0' }
     $brush = [Windows.Media.BrushConverter]::new().ConvertFromString($accent)
     $controls.BrTime.Foreground = $brush; $controls.IeTime.Foreground = $brush
     if ($travel.Active) {
-        $left = [Math]::Max(0,[Math]::Ceiling($travel.Timeout - ($now - $travel.Last).TotalSeconds))
+        $left = [Math]::Ceiling((Get-TravelRemaining $travel.Idle.Elapsed))
         $controls.TravelStatus.Text = "PREVIEW · resets in ${left}s"
     } else { $controls.TravelStatus.Text = 'TIME TRAVEL · drag to preview' }
-    $br = [TimeZoneInfo]::ConvertTime($utc,$brZone)
-    $ie = [TimeZoneInfo]::ConvertTime($utc,$ieZone)
+    $snapshot = Get-ClockSnapshot $utc $brZone $ieZone
+    $br = $snapshot.Brazil
+    $ie = $snapshot.Ireland
     foreach ($pair in @(@{Key='Br';Time=$br},@{Key='Ie';Time=$ie})) {
         $k = $pair.Key; $t = $pair.Time
         $controls[($k+'Time')].Text = $t.ToString('HH:mm',$culture)
@@ -137,7 +144,7 @@ function Update-Clocks {
         $controls[($k+'Date')].ToolTip = $t.ToString('dddd, dd MMMM yyyy',$culture)
         $controls[($k+'Offset')].Text = Format-Offset $t.Offset
     }
-    $d = $ie.Offset - $br.Offset
+    $d = $snapshot.Difference
     $diff = if ($d.Minutes -eq 0) { ('{0:+0;-0;0}h' -f $d.TotalHours) } else { ('{0:+0.##;-0.##;0}h' -f $d.TotalHours) }
     $controls.Difference.Text = "Dublin: $diff vs Brazil"
     $controls.Season.Text = if ($ie.Offset.TotalHours -eq 1) { 'Irish summer time' } elseif ($ie.Offset.TotalHours -eq 0) { 'Irish winter time' } else { 'Irish time updated' }
@@ -173,7 +180,7 @@ if (Test-Path $statePath) {
         if ($null -ne $saved.Topmost) { $desktop.Pin = [bool]$saved.Topmost }
         if ($null -ne $saved.Locked) { $desktop.Locked = [bool]$saved.Locked }
         if ($null -ne $saved.Fullscreen) { $desktop.Fullscreen = [bool]$saved.Fullscreen }
-        if ($null -ne $saved.PetSignature) { $desktop.Signature = $saved.PetSignature }
+        if (-not $Review -and $null -ne $saved.PetSignature) { $desktop.Signature = $saved.PetSignature }
     } catch { }
 }
 Update-Pin
@@ -272,6 +279,7 @@ $window.Add_SourceInitialized({ $desktop.Hwnd = [Windows.Interop.WindowInteropHe
 $menu = New-Object Windows.Controls.ContextMenu
 $startup = New-Object Windows.Controls.MenuItem
 $startup.Header = 'Start with Windows'; $startup.IsCheckable = $true; $startup.IsChecked = (Test-Path $startupPath)
+$startup.IsEnabled = -not $Review
 $startup.Add_Click({
     try {
         if ($startup.IsChecked) {
@@ -297,17 +305,40 @@ foreach ($preset in @(@{Label='Small (60%)';Width=264},@{Label='Normal (100%)';W
 }
 $fullItem = New-Object Windows.Controls.MenuItem; $fullItem.Header = 'Hide in fullscreen'; $fullItem.IsCheckable=$true; $fullItem.IsChecked=$desktop.Fullscreen; $fullItem.IsEnabled=$bridgeAvailable
 $fullItem.Add_Click({ $desktop.Fullscreen=$fullItem.IsChecked; Update-Desktop; Save-Settings })
-$pairItem = New-Object Windows.Controls.MenuItem; $pairItem.Header = 'Link ChatGPT pet (point in 5s)'; $pairItem.IsEnabled=$bridgeAvailable
+$pairItem = New-Object Windows.Controls.MenuItem; $pairItem.Header = 'Link ChatGPT pet (point in 5s)'; $pairItem.IsEnabled=$bridgeAvailable -and -not $Review
 $pairItem.Add_Click({ $desktop.PairUntil=[DateTimeOffset]::UtcNow.AddSeconds(5); Update-Desktop })
 $unpairItem = New-Object Windows.Controls.MenuItem; $unpairItem.Header = 'Unlink pet / local animation'
 $unpairItem.Add_Click({ $desktop.PairUntil=$null; $desktop.Signature=$null; $desktop.PetHandle=[IntPtr]::Zero; $desktop.PetPid=0; $desktop.LastDock=''; Show-PetNotice 'Jeremias · local animation'; Update-Desktop; Save-Settings })
 $quit = New-Object Windows.Controls.MenuItem; $quit.Header = 'Close'; $quit.Add_Click({ $window.Close() })
+$greet = [Windows.Controls.MenuItem]::new()
+$greet.Header = 'Greet Jeremias'
+$greet.Add_Click({
+    if ($desktop.Hidden -or $controls.Mascot.Visibility -ne 'Visible') { return }
+    Show-PetNotice 'Jeremias says hello'
+    $controls.PetStatus.Text = $desktop.PairNotice
+    if ([Windows.SystemParameters]::ClientAreaAnimation) {
+        $hop = [Windows.Media.Animation.DoubleAnimation]::new()
+        $hop.From = 0
+        $hop.To = -5
+        $hop.Duration = [Windows.Duration]::new([TimeSpan]::FromMilliseconds(225))
+        $hop.AutoReverse = $true
+        $hop.FillBehavior = 'Stop'
+        $hop.EasingFunction = [Windows.Media.Animation.SineEase]::new()
+        $mascotOffset.BeginAnimation([Windows.Media.TranslateTransform]::YProperty, $hop)
+    }
+})
+[void]$menu.Items.Add($greet)
 [void]$menu.Items.Add($startup); [void]$menu.Items.Add($reset); [void]$menu.Items.Add($sizeMenu); [void]$menu.Items.Add($fullItem); [void]$menu.Items.Add($pairItem); [void]$menu.Items.Add($unpairItem); [void]$menu.Items.Add($quit); $window.ContextMenu = $menu
 $clockTimer = New-Object Windows.Threading.DispatcherTimer; $clockTimer.Interval = [TimeSpan]::FromMilliseconds(250); $clockTimer.Add_Tick({ Update-Clocks })
 $desktopTimer = New-Object Windows.Threading.DispatcherTimer; $desktopTimer.Interval=[TimeSpan]::FromMilliseconds(500); $desktopTimer.Add_Tick({ try { Update-Desktop } catch { $controls.Mascot.Visibility='Visible'; $controls.PetStatus.Text='Local pet · integration unavailable' } })
 $blinkTimer = New-Object Windows.Threading.DispatcherTimer; $blinkTimer.Interval = [TimeSpan]::FromSeconds(5)
 $openTimer = New-Object Windows.Threading.DispatcherTimer; $openTimer.Interval = [TimeSpan]::FromMilliseconds(170)
-$blinkTimer.Add_Tick({ $controls.Mascot.Source = $blink; $openTimer.Start() })
+$blinkTimer.Add_Tick({
+    if (-not $desktop.Hidden -and $controls.Mascot.Visibility -eq 'Visible' -and [Windows.SystemParameters]::ClientAreaAnimation) {
+        $controls.Mascot.Source = $blink
+        $openTimer.Start()
+    }
+})
 $openTimer.Add_Tick({ $openTimer.Stop(); $controls.Mascot.Source = $normal })
 $window.Add_Closed({ $clockTimer.Stop(); $desktopTimer.Stop(); $blinkTimer.Stop(); $openTimer.Stop(); Save-Settings })
 Update-Clocks; $clockTimer.Start(); $desktopTimer.Start(); $blinkTimer.Start(); [void]$window.ShowDialog()

@@ -2,7 +2,15 @@
 
 ## Automated baseline
 
-On Windows, run `powershell.exe -NoProfile -STA -File .\Validate.ps1`. It checks PowerShell parsing, C# compilation, XAML instantiation and six Windows time-zone examples. The included workflow executes this command on a Windows runner. This does not test interactive behavior. The baseline is not yet verified in a Windows runtime.
+On Windows, run `Validate.cmd` or `powershell.exe -NoProfile -STA -ExecutionPolicy Bypass -File .\Validate.ps1`. The script checks parsing, Win32 helper compilation, WPF markup, DST, midnight and preview calculations. The CI workflow runs the same script. Interactive behavior is covered separately below.
+
+## Reviewing locally
+
+1. Check out the PR on Windows and double-click `Review.cmd`. The review window can run alongside the regular widget. It has a separate mutex and review settings folder. Startup shortcut changes and external pet linking are disabled.
+2. Verify the live clocks. Drag or scroll the timeline, observe the preview freeze, wait 12 seconds after releasing it, then test **Now**.
+3. Right-click and choose **Greet Jeremias**. Expect a short movement and a text greeting. Repeat with Windows animation effects disabled. Expect the text greeting and a still mascot.
+4. Resize, lock, pin, close and reopen the review instance. Confirm the review preferences persist. Use the remaining matrix for fullscreen and monitor coverage.
+5. Close the review window and record the Windows build, display setup and observed results in the PR.
 
 ## Manual acceptance matrix
 

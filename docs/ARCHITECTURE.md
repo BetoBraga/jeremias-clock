@@ -17,6 +17,8 @@ flowchart TD
 
 ## Time model
 
+`ClockModel.ps1` supplies the time-zone snapshot, preview anchor, offset and idle countdown to both the UI and validation script. A monotonic stopwatch measures inactivity independently of changes to the system clock.
+
 Live mode samples DateTimeOffset.UtcNow once per update. Preview mode freezes an anchor rounded down to a São Paulo quarter hour, then adds the slider offset. Both faces use the same UTC instant. IDs: `E. South America Standard Time` and `GMT Standard Time`. Use current Windows time-zone rules, never assume a fixed offset. Display dates independently. Reset preview after 12 seconds of inactivity or immediately on Now. The UI timer runs every 250 ms; desktop checks every 500 ms. A 5-second blink timer switches to the alternate sprite for 170 ms.
 
 ## Desktop model
