@@ -92,144 +92,145 @@ function Show-TodayPanel {
     $reader = [System.Xml.XmlNodeReader]::new($markup)
     try { $panel = [Windows.Markup.XamlReader]::Load($reader) } finally { $reader.Close() }
     if ($null -ne $Owner) { $panel.Owner = $Owner }
-    $controls = @{}
+    # Keep panel state distinct from the clock while both dispatchers' event handlers are active.
+    $todayControls = @{}
     foreach ($name in 'LocalDate','StoreWarning','Status','ShowPast','AgendaList','EntryTitle','EntryKind','EntryStart','EntryEnd','NewEntry','SaveEntry','NoteSearch','NoteList','NoteTitle','NoteText','NewNote','SaveNote') {
-        $controls[$name] = $panel.FindName($name)
+        $todayControls[$name] = $panel.FindName($name)
     }
 
     $data = Read-ProductivityStore -Path $Path
-    $state = @{ Data = $data; NoteId = $null; EntryId = $null }
-    $controls.StoreWarning.Text = [string]$data.Warning
-    $format = 'yyyy-MM-dd HH:mm'
-    $culture = [Globalization.CultureInfo]::InvariantCulture
-    $zone = [TimeZoneInfo]::Local
-    $controls.LocalDate.Text = '{0}  |  {1}' -f [DateTime]::Now.ToString('D'), $zone.DisplayName
+    $todayState = @{ Data = $data; NoteId = $null; EntryId = $null }
+    $todayControls.StoreWarning.Text = [string]$data.Warning
+    $todayFormat = 'yyyy-MM-dd HH:mm'
+    $todayCulture = [Globalization.CultureInfo]::InvariantCulture
+    $todayZone = [TimeZoneInfo]::Local
+    $todayControls.LocalDate.Text = '{0}  |  {1}' -f [DateTime]::Now.ToString('D'), $todayZone.DisplayName
 
     function ConvertTo-TodayUtc([string]$value) {
         $localTime = [DateTime]::MinValue
-        if (-not [DateTime]::TryParseExact($value.Trim(), $format, $culture, [Globalization.DateTimeStyles]::None, [ref]$localTime)) {
+        if (-not [DateTime]::TryParseExact($value.Trim(), $todayFormat, $todayCulture, [Globalization.DateTimeStyles]::None, [ref]$localTime)) {
             throw 'Enter the start and end as yyyy-MM-dd HH:mm.'
         }
-        if ($zone.IsInvalidTime($localTime) -or $zone.IsAmbiguousTime($localTime)) {
+        if ($todayZone.IsInvalidTime($localTime) -or $todayZone.IsAmbiguousTime($localTime)) {
             throw 'This time is skipped or repeated by a clock change. Choose a nearby unambiguous local time.'
         }
-        return [DateTimeOffset]::new([TimeZoneInfo]::ConvertTimeToUtc($localTime, $zone))
+        return [DateTimeOffset]::new([TimeZoneInfo]::ConvertTimeToUtc($localTime, $todayZone))
     }
 
     function Get-TodayInstant($value) {
-        return [DateTimeOffset]::Parse([string]$value, $culture)
+        return [DateTimeOffset]::Parse([string]$value, $todayCulture)
     }
 
     function Refresh-TodayAgenda {
-        $controls.AgendaList.Items.Clear()
+        $todayControls.AgendaList.Items.Clear()
         $now = [DateTimeOffset]::UtcNow
-        $sorted = $state.Data.Entries | Sort-Object { Get-TodayInstant $_.StartUtc }
+        $sorted = $todayState.Data.Entries | Sort-Object { Get-TodayInstant $_.StartUtc }
         foreach ($entry in $sorted) {
-            if (-not $controls.ShowPast.IsChecked -and (Get-TodayInstant $entry.EndUtc) -le $now) { continue }
-            $start = [TimeZoneInfo]::ConvertTime((Get-TodayInstant $entry.StartUtc), $zone)
-            $end = [TimeZoneInfo]::ConvertTime((Get-TodayInstant $entry.EndUtc), $zone)
+            if (-not $todayControls.ShowPast.IsChecked -and (Get-TodayInstant $entry.EndUtc) -le $now) { continue }
+            $start = [TimeZoneInfo]::ConvertTime((Get-TodayInstant $entry.StartUtc), $todayZone)
+            $end = [TimeZoneInfo]::ConvertTime((Get-TodayInstant $entry.EndUtc), $todayZone)
             $item = [Windows.Controls.ListBoxItem]::new()
             $item.Content = '{0} | {1} - {2} | {3}' -f $entry.Kind, $start.ToString('MMM d HH:mm'), $end.ToString('MMM d HH:mm'), $entry.Title
             $item.Tag = $entry
-            [void]$controls.AgendaList.Items.Add($item)
+            [void]$todayControls.AgendaList.Items.Add($item)
         }
-        if ($controls.AgendaList.Items.Count -eq 0) { $controls.Status.Text = 'No entries in this view.' }
+        if ($todayControls.AgendaList.Items.Count -eq 0) { $todayControls.Status.Text = 'No entries in this view.' }
     }
 
     function Refresh-TodayNotes {
-        $controls.NoteList.Items.Clear()
-        $query = $controls.NoteSearch.Text.Trim()
-        foreach ($note in $state.Data.Notes) {
+        $todayControls.NoteList.Items.Clear()
+        $query = $todayControls.NoteSearch.Text.Trim()
+        foreach ($note in $todayState.Data.Notes) {
             $matches = -not $query -or $note.Title.IndexOf($query, [StringComparison]::CurrentCultureIgnoreCase) -ge 0 -or $note.Text.IndexOf($query, [StringComparison]::CurrentCultureIgnoreCase) -ge 0
             if (-not $matches) { continue }
             $item = [Windows.Controls.ListBoxItem]::new()
             $item.Content = $note.Title
             $item.Tag = $note
-            [void]$controls.NoteList.Items.Add($item)
+            [void]$todayControls.NoteList.Items.Add($item)
         }
     }
 
     function Reset-TodayEntry {
-        $controls.AgendaList.SelectedIndex = -1
-        $state.EntryId = $null
-        $controls.EntryTitle.Clear()
-        $controls.EntryKind.SelectedIndex = 0
+        $todayControls.AgendaList.SelectedIndex = -1
+        $todayState.EntryId = $null
+        $todayControls.EntryTitle.Clear()
+        $todayControls.EntryKind.SelectedIndex = 0
         $start = [DateTime]::Now.AddMinutes(5)
-        $controls.EntryStart.Text = $start.ToString($format, $culture)
-        $controls.EntryEnd.Text = $start.AddMinutes(30).ToString($format, $culture)
+        $todayControls.EntryStart.Text = $start.ToString($todayFormat, $todayCulture)
+        $todayControls.EntryEnd.Text = $start.AddMinutes(30).ToString($todayFormat, $todayCulture)
     }
 
-    $controls.NewEntry.Add_Click({
+    $todayControls.NewEntry.Add_Click({
         Reset-TodayEntry
-        [void]$controls.EntryTitle.Focus()
+        [void]$todayControls.EntryTitle.Focus()
     })
-    $controls.ShowPast.Add_Click({
-        $controls.Status.Text = ''
+    $todayControls.ShowPast.Add_Click({
+        $todayControls.Status.Text = ''
         Refresh-TodayAgenda
     })
-    $controls.AgendaList.Add_SelectionChanged({
-        $selected = $controls.AgendaList.SelectedItem
+    $todayControls.AgendaList.Add_SelectionChanged({
+        $selected = $todayControls.AgendaList.SelectedItem
         if ($null -eq $selected) { return }
         $entry = $selected.Tag
-        $state.EntryId = $entry.Id
-        $controls.EntryTitle.Text = $entry.Title
-        $controls.EntryKind.SelectedIndex = if ($entry.Kind -eq 'Focus') { 1 } else { 0 }
-        $controls.EntryStart.Text = [TimeZoneInfo]::ConvertTime((Get-TodayInstant $entry.StartUtc), $zone).ToString($format, $culture)
-        $controls.EntryEnd.Text = [TimeZoneInfo]::ConvertTime((Get-TodayInstant $entry.EndUtc), $zone).ToString($format, $culture)
-        $controls.Status.Text = ''
+        $todayState.EntryId = $entry.Id
+        $todayControls.EntryTitle.Text = $entry.Title
+        $todayControls.EntryKind.SelectedIndex = if ($entry.Kind -eq 'Focus') { 1 } else { 0 }
+        $todayControls.EntryStart.Text = [TimeZoneInfo]::ConvertTime((Get-TodayInstant $entry.StartUtc), $todayZone).ToString($todayFormat, $todayCulture)
+        $todayControls.EntryEnd.Text = [TimeZoneInfo]::ConvertTime((Get-TodayInstant $entry.EndUtc), $todayZone).ToString($todayFormat, $todayCulture)
+        $todayControls.Status.Text = ''
     })
-    $controls.SaveEntry.Add_Click({
+    $todayControls.SaveEntry.Add_Click({
         try {
-            $title = $controls.EntryTitle.Text.Trim()
+            $title = $todayControls.EntryTitle.Text.Trim()
             if (-not $title) { throw 'Enter a title for this event.' }
-            $start = ConvertTo-TodayUtc $controls.EntryStart.Text
-            $end = ConvertTo-TodayUtc $controls.EntryEnd.Text
+            $start = ConvertTo-TodayUtc $todayControls.EntryStart.Text
+            $end = ConvertTo-TodayUtc $todayControls.EntryEnd.Text
             if ($end -le $start) { throw 'The end must be after the start.' }
-            $id = if ($state.EntryId) { $state.EntryId } else { [Guid]::NewGuid().ToString() }
+            $id = if ($todayState.EntryId) { $todayState.EntryId } else { [Guid]::NewGuid().ToString() }
             $entry = @{
-                Id = $id; Title = $title; Kind = [string]$controls.EntryKind.SelectedItem.Content
-                StartUtc = $start.ToString('o', $culture); EndUtc = $end.ToString('o', $culture)
+                Id = $id; Title = $title; Kind = [string]$todayControls.EntryKind.SelectedItem.Content
+                StartUtc = $start.ToString('o', $todayCulture); EndUtc = $end.ToString('o', $todayCulture)
             }
-            $newData = @{ Notes = $state.Data.Notes; Entries = @($state.Data.Entries | Where-Object Id -ne $id) + @($entry) }
+            $newData = @{ Notes = $todayState.Data.Notes; Entries = @($todayState.Data.Entries | Where-Object Id -ne $id) + @($entry) }
             Save-ProductivityStore -Path $Path -Data $newData
-            $state.Data = $newData
-            $state.EntryId = $id
+            $todayState.Data = $newData
+            $todayState.EntryId = $id
             Refresh-TodayAgenda
-            $controls.StoreWarning.Text = ''
-            $controls.Status.Text = 'Event saved.'
-        } catch { $controls.Status.Text = $_.Exception.Message }
+            $todayControls.StoreWarning.Text = ''
+            $todayControls.Status.Text = 'Event saved.'
+        } catch { $todayControls.Status.Text = $_.Exception.Message }
     })
 
-    $controls.NoteSearch.Add_TextChanged({ Refresh-TodayNotes })
-    $controls.NoteList.Add_SelectionChanged({
-        $selected = $controls.NoteList.SelectedItem
+    $todayControls.NoteSearch.Add_TextChanged({ Refresh-TodayNotes })
+    $todayControls.NoteList.Add_SelectionChanged({
+        $selected = $todayControls.NoteList.SelectedItem
         if ($null -eq $selected) { return }
-        $state.NoteId = $selected.Tag.Id
-        $controls.NoteTitle.Text = $selected.Tag.Title
-        $controls.NoteText.Text = $selected.Tag.Text
-        $controls.Status.Text = ''
+        $todayState.NoteId = $selected.Tag.Id
+        $todayControls.NoteTitle.Text = $selected.Tag.Title
+        $todayControls.NoteText.Text = $selected.Tag.Text
+        $todayControls.Status.Text = ''
     })
-    $controls.NewNote.Add_Click({
-        $controls.NoteList.SelectedIndex = -1
-        $state.NoteId = $null
-        $controls.NoteTitle.Clear()
-        $controls.NoteText.Clear()
-        [void]$controls.NoteTitle.Focus()
+    $todayControls.NewNote.Add_Click({
+        $todayControls.NoteList.SelectedIndex = -1
+        $todayState.NoteId = $null
+        $todayControls.NoteTitle.Clear()
+        $todayControls.NoteText.Clear()
+        [void]$todayControls.NoteTitle.Focus()
     })
-    $controls.SaveNote.Add_Click({
+    $todayControls.SaveNote.Add_Click({
         try {
-            $title = $controls.NoteTitle.Text.Trim()
+            $title = $todayControls.NoteTitle.Text.Trim()
             if (-not $title) { throw 'Enter a title for this note.' }
-            $id = if ($state.NoteId) { $state.NoteId } else { [Guid]::NewGuid().ToString() }
-            $note = @{ Id = $id; Title = $title; Text = $controls.NoteText.Text }
-            $newData = @{ Entries = $state.Data.Entries; Notes = @($state.Data.Notes | Where-Object Id -ne $id) + @($note) }
+            $id = if ($todayState.NoteId) { $todayState.NoteId } else { [Guid]::NewGuid().ToString() }
+            $note = @{ Id = $id; Title = $title; Text = $todayControls.NoteText.Text }
+            $newData = @{ Entries = $todayState.Data.Entries; Notes = @($todayState.Data.Notes | Where-Object Id -ne $id) + @($note) }
             Save-ProductivityStore -Path $Path -Data $newData
-            $state.Data = $newData
-            $state.NoteId = $id
+            $todayState.Data = $newData
+            $todayState.NoteId = $id
             Refresh-TodayNotes
-            $controls.StoreWarning.Text = ''
-            $controls.Status.Text = 'Note saved.'
-        } catch { $controls.Status.Text = $_.Exception.Message }
+            $todayControls.StoreWarning.Text = ''
+            $todayControls.Status.Text = 'Note saved.'
+        } catch { $todayControls.Status.Text = $_.Exception.Message }
     })
 
     Reset-TodayEntry

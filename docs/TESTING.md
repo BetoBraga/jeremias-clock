@@ -22,6 +22,14 @@ On Windows, run `Validate.cmd` or `powershell.exe -NoProfile -STA -ExecutionPoli
 
 The automated productivity checks use a temporary store to exercise the data layer. The steps above cover interaction and layout.
 
+On an interactive desktop, close any open review instance and run the entry-point regression separately:
+
+```powershell
+powershell.exe -NoProfile -STA -ExecutionPolicy Bypass -File .\tests\Validate-TodayEntry.ps1
+```
+
+It launches the review widget, opens Today through the actual menu, and saves a focus block and a note to a temporary store.
+
 ## Measuring the Windows baseline
 
 Run on an interactive Windows desktop with the widget closed and no fullscreen app. Keep the display arrangement, power mode and background load the same when comparing builds. Leave the window untouched while it samples.
