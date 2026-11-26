@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Made the local desktop pet the default launcher; the legacy clock has a separate launcher and preserved branch.
+- Added an optional one-to-four-zone clock, local personalities, and bounded opt-in note persistence.
+
 - Updated the README with the maintainer-provided Jeremias illustration.
 
 

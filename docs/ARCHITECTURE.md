@@ -1,8 +1,10 @@
 # Architecture
 
+`Start.cmd` opens the [local desktop pet](PET-FOUNDATION.md) with an isolated profile. The following describes the preserved world clock runtime.
+
 ## Runtime and boundaries
 
-The current baseline intentionally retains its original portable layout. `Start.cmd` invokes Windows PowerShell 5.1 in STA mode. `WorldClock.ps1` owns the WPF window, the embedded XAML, clock calculations, interaction handlers, animation and local preferences. `WindowBridge.cs` is an optional C# Win32 helper compiled with Add-Type. `Validate.ps1` checks source and WPF loading without starting the app. Assets are loaded relative to the script, not the working directory.
+The current baseline intentionally retains its original portable layout. `Start-Clock.cmd` invokes Windows PowerShell 5.1 in STA mode. `WorldClock.ps1` owns the WPF window, the embedded XAML, clock calculations, interaction handlers, animation and local preferences. `WindowBridge.cs` is an optional C# Win32 helper compiled with Add-Type. `Validate.ps1` checks source and WPF loading without starting the app. Assets are loaded relative to the script, not the working directory.
 
 ```mermaid
 flowchart TD
