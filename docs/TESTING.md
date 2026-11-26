@@ -12,6 +12,16 @@ On Windows, run `Validate.cmd` or `powershell.exe -NoProfile -STA -ExecutionPoli
 4. Resize, lock, pin, close and reopen the review instance. Confirm the review preferences persist. Use the remaining matrix for fullscreen and monitor coverage.
 5. Close the review window and record the Windows build, display setup and observed results in the PR.
 
+## Review Today offline
+
+1. Open `Review.cmd`, then right-click the clock and choose **Today**.
+2. Add a note with a title and body. Search for a word from the body, reopen the result and edit it.
+3. Add a Meeting and a Focus block using local dates and times. Reopen one and change its time. Try an end time before the start and verify that the previous saved entry stays intact.
+4. Close and reopen the review app. Check that the entries and note changes are present. Switch the clock to Time Travel and open Today again. The panel should still use the actual local date.
+5. Repeat with the network disconnected. All these operations should work. Review data stays in `%LOCALAPPDATA%\JeremiasWorldClock.Review`.
+
+The automated productivity checks use a temporary store to exercise the data layer. The steps above cover interaction and layout.
+
 ## Measuring the Windows baseline
 
 Run on an interactive Windows desktop with the widget closed and no fullscreen app. Keep the display arrangement, power mode and background load the same when comparing builds. Leave the window untouched while it samples.

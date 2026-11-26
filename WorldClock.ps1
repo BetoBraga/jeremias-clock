@@ -286,6 +286,20 @@ function Update-Desktop {
 }
 $window.Add_SourceInitialized({ $desktop.Hwnd = [Windows.Interop.WindowInteropHelper]::new($window).Handle })
 $menu = New-Object Windows.Controls.ContextMenu
+if (-not $MeasureIdleSeconds) {
+    $todayItem = [Windows.Controls.MenuItem]::new()
+    $todayItem.Header = 'Today'
+    $todayItem.Add_Click({
+        try {
+            . (Join-Path $root 'ProductivityStore.ps1')
+            . (Join-Path $root 'TodayPanel.ps1')
+            Show-TodayPanel -Owner $window -Path (Join-Path $stateDir 'productivity.json')
+        } catch {
+            [void][Windows.MessageBox]::Show($window, $_.Exception.Message, 'Jeremias - Today')
+        }
+    })
+    [void]$menu.Items.Add($todayItem)
+}
 $startup = New-Object Windows.Controls.MenuItem
 $startup.Header = 'Start with Windows'; $startup.IsCheckable = $true; $startup.IsChecked = (Test-Path $startupPath)
 $startup.IsEnabled = -not $Review

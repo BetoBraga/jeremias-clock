@@ -32,5 +32,8 @@ try {
     if ((Get-TravelOffset 16) -ne 15 -or (Get-TravelOffset -1500) -ne -1440 -or (Get-TravelOffset 1500) -ne 1440) { throw 'Preview step or bound mismatch' }
     if ((Get-TravelRemaining ([TimeSpan]::FromSeconds(11))) -ne 1 -or (Get-TravelRemaining ([TimeSpan]::FromSeconds(12))) -ne 0) { throw 'Preview idle reset mismatch' }
     Write-Host 'OK: Time Travel anchor, bounds, idle countdown and midnight'
+    $null = [System.Management.Automation.Language.Parser]::ParseFile((Join-Path $PSScriptRoot 'TodayPanel.ps1'), [ref]$tokens, [ref]$errors)
+    if ($errors.Count) { throw ($errors | Out-String) }
+    & (Join-Path $PSScriptRoot 'tests\Validate-Productivity.ps1')
     Write-Host 'Validation completed. GUI interaction still requires manual testing.'
 } catch { Write-Host $_.Exception.Message -ForegroundColor Red; exit 1 }

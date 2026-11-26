@@ -88,6 +88,8 @@ The companion foundation branch adds shared clock calculations, STA regression c
 
 ### 2 · Local productivity suite
 
+- [x] Add the initial offline Today panel with searchable, editable notes and local meeting and focus entries. A separate atomic store supports recovery from its last valid backup. Interactive review steps are in [Testing](docs/TESTING.md#review-today-offline).
+
 - [ ] Add a Today panel for upcoming events, tasks, active focus blocks and reminders. Add editable notes with quick capture and search. Support local agenda entries, recurring reminders with an explicit time zone, completed tasks and reviewable reminder history. Keep the clock's existing preview action separate from date selection.
 - [ ] Store agenda, notes, reminder state and activity under the user's app-data folder. Evaluate a small SQLite store once calendar and responsibility records need transactional updates. Keep existing preferences backward-compatible. Add atomic settings writes, bounded backups and a clear import/export path for personal data.
 - [ ] Add the first calendar connector in read-only mode with separate opt-in. Show last successful sync, account, errors and stale data. Use local fixtures for repeatable tests and qualify live changes on the test calendar.

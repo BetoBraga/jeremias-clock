@@ -1,4 +1,6 @@
 settings.json
+productivity.json
+productivity.json.bak
 *.lnk
 *.log
 .env

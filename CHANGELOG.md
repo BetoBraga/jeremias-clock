@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Added an offline Today panel for searchable notes, meetings and focus blocks.
+
 - Added a repeatable Windows benchmark for first render, idle CPU and memory.
 
 - Added an isolated Windows review launcher and a local mascot greeting that respects the Windows animation setting.
