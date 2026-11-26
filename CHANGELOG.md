@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Added a repeatable Windows benchmark for first render, idle CPU and memory.
+
 - Added an isolated Windows review launcher and a local mascot greeting that respects the Windows animation setting.
 - Extracted the clock and Time Travel calculations for regression coverage. The inactivity countdown uses elapsed time.
 

@@ -1,8 +1,16 @@
-﻿param([switch]$Review)
+﻿param(
+    [switch]$Review,
+    [ValidateRange(1, 300)][int]$MeasureIdleSeconds,
+    [ValidateRange(0, 60)][int]$MeasureWarmupSeconds = 5,
+    [long]$MeasureStartTick
+)
 
 $ErrorActionPreference = 'Stop'
+if ($MeasureIdleSeconds -and (-not $Review -or $MeasureStartTick -le 0)) {
+    throw 'Use Measure-Clock.ps1 to run the benchmark.'
+}
 Add-Type -AssemblyName PresentationFramework, PresentationCore, WindowsBase
-$mutexName = if ($Review) { 'Local\JeremiasWorldClock.Review' } else { 'Local\JeremiasWorldClock' }
+$mutexName = if ($MeasureIdleSeconds) { 'Local\JeremiasWorldClock.Measure' } elseif ($Review) { 'Local\JeremiasWorldClock.Review' } else { 'Local\JeremiasWorldClock' }
 $mutex = [System.Threading.Mutex]::new($false, $mutexName)
 if (-not $mutex.WaitOne(0)) { $mutex.Dispose(); return }
 try {
@@ -12,7 +20,7 @@ $bridgeAvailable = $false
 try { Add-Type -Path (Join-Path $root 'WindowBridge.cs'); $bridgeAvailable = $true } catch { $bridgeAvailable = $false }
 $stateFolder = if ($Review) { 'JeremiasWorldClock.Review' } else { 'JeremiasWorldClock' }
 $stateDir = Join-Path $env:LOCALAPPDATA $stateFolder
-$null = New-Item -ItemType Directory -Force -Path $stateDir
+if (-not $MeasureIdleSeconds) { $null = New-Item -ItemType Directory -Force -Path $stateDir }
 $statePath = Join-Path $stateDir 'settings.json'
 $startupPath = Join-Path ([Environment]::GetFolderPath('Startup')) 'Jeremias World Clock.lnk'
 $brZone = [TimeZoneInfo]::FindSystemTimeZoneById('E. South America Standard Time')
@@ -157,6 +165,7 @@ function Update-Pin {
     if (-not $desktop.Hidden) { $window.Topmost = $desktop.Pin }
 }
 function Save-Settings {
+    if ($MeasureIdleSeconds) { return }
     try { @{Left=$window.Left;Top=$window.Top;Topmost=$desktop.Pin;Width=$window.Width;Locked=$desktop.Locked;Fullscreen=$desktop.Fullscreen;PetSignature=$desktop.Signature} | ConvertTo-Json | Set-Content -Encoding UTF8 $statePath } catch { }
 }
 function Set-WidgetSize([double]$width) {
@@ -168,7 +177,7 @@ $work = [System.Windows.SystemParameters]::WorkArea
 $window.Left = $work.Right - $window.Width - 14
 $window.Top = $work.Bottom - $window.Height - 14
 $window.Topmost = $desktop.Pin
-if (Test-Path $statePath) {
+if (-not $MeasureIdleSeconds -and (Test-Path $statePath)) {
     try {
         $saved = Get-Content -Raw $statePath | ConvertFrom-Json
         if ($null -ne $saved.Width -and [double]$saved.Width -gt 0) { Set-WidgetSize ([double]$saved.Width) }
@@ -341,7 +350,15 @@ $blinkTimer.Add_Tick({
 })
 $openTimer.Add_Tick({ $openTimer.Stop(); $controls.Mascot.Source = $normal })
 $window.Add_Closed({ $clockTimer.Stop(); $desktopTimer.Stop(); $blinkTimer.Stop(); $openTimer.Stop(); Save-Settings })
+if ($MeasureIdleSeconds) {
+    . (Join-Path $root 'ClockBenchmark.ps1')
+}
 Update-Clocks; $clockTimer.Start(); $desktopTimer.Start(); $blinkTimer.Start(); [void]$window.ShowDialog()
+if ($MeasureIdleSeconds) {
+    if (-not $measurement.Result) { throw 'Benchmark window closed before its idle sample was complete.' }
+    $measurement.Result | ConvertTo-Json -Compress
+}
 } catch {
+    if ($MeasureIdleSeconds) { throw }
     [void][Windows.MessageBox]::Show($_.Exception.Message,'Jeremias World Clock - error')
 } finally { $mutex.ReleaseMutex(); $mutex.Dispose() }
