@@ -2,7 +2,7 @@
 
 A compact Windows desktop clock for Brazil (São Paulo) and Ireland (Dublin), accompanied by Jeremias, a friendly three-headed black dragon with green eyes.
 
-<p align="center"><img src="assets/clock-icon.png" width="180" alt="Jeremias, a three-headed dragon holding a green clock"></p>
+<p align="center"><img src="assets/jeremias-readme.png" width="240" alt="Jeremias, a smiling black dragon with three heads and bright green eyes"></p>
 
 **Status:** preview. This is a source distribution, not a signed installer. Windows runtime and integration tests are still pending.
 
