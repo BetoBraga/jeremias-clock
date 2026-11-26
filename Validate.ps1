@@ -49,5 +49,6 @@ try {
     foreach ($test in 'Validate-MeetingBrief.ps1','Validate-CalendarPilot.ps1','Validate-OpenClawPilot.ps1','Validate-OpenBotFixture.ps1','Validate-CalendarWritePolicy.ps1') {
         & (Join-Path $PSScriptRoot ("tests/" + $test))
     }
+    & (Join-Path $PSScriptRoot 'tests/Validate-Pet.ps1')
     Write-Host 'Validation completed. GUI interaction still requires manual testing.'
 } catch { Write-Host $_.Exception.Message -ForegroundColor Red; exit 1 }
