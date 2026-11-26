@@ -66,6 +66,8 @@ The companion foundation branch adds shared clock calculations, STA regression c
 
 ### 0 · Baseline and stack decision
 
+- [x] Add and smoke-test a repeatable startup and idle measurement script. Three short local samples completed. See [Testing](docs/TESTING.md#measuring-the-windows-baseline) for the full measurement procedure.
+
 - [ ] Read the current validation workflow and record a baseline from `Validate.ps1` in Windows PowerShell STA mode and the manual matrix in `docs/TESTING.md`. Record OS build, DPI, monitor layout, startup and idle measurements.
 - [x] Characterize the clock conversion and preview calculations with automated DST, midnight, step, bound and reset timing checks.
 - [ ] Complete manual characterization of interactive Time Travel, settings and desktop behavior. Preserve the 440×322 logical canvas, 60–250% scale and independence of position lock and topmost. Include corrupt settings, fullscreen fallback and missing bridge cases.

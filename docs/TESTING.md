@@ -12,6 +12,18 @@ On Windows, run `Validate.cmd` or `powershell.exe -NoProfile -STA -ExecutionPoli
 4. Resize, lock, pin, close and reopen the review instance. Confirm the review preferences persist. Use the remaining matrix for fullscreen and monitor coverage.
 5. Close the review window and record the Windows build, display setup and observed results in the PR.
 
+## Measuring the Windows baseline
+
+Run on an interactive Windows desktop with the widget closed and no fullscreen app. Keep the display arrangement, power mode and background load the same when comparing builds. Leave the window untouched while it samples.
+
+```powershell
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\Measure-Clock.ps1 -Launches 20 -IdleSeconds 15 -WarmupSeconds 5
+```
+
+Each launch opens the actual WPF clock in a fresh Windows PowerShell process. It uses default preferences and leaves the regular and review settings untouched. Startup spans process creation through WPF's first `ContentRendered` event. The report includes nearest-rank p95, CPU averaged over idle sample time and normalized to total logical CPU capacity, plus per-launch private memory, working set and DPI. This procedure collects about five minutes of idle across 20 processes with normal OS caching. Record monitor layout and power mode separately.
+
+A three-launch smoke run on Windows build `26300.9974` used 1 second of warm-up and 2 seconds of idle per window. First render was 856–934 ms, mean normalized idle CPU was 0.082%, and private memory was 141–142 MiB. Use the longer procedure and the manual matrix for stack and release decisions.
+
 ## Manual acceptance matrix
 
 | Scenario | Expected |

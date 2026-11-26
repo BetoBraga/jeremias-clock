@@ -47,6 +47,8 @@ This is not an official ChatGPT integration. It uses limited Win32 window metada
 
 ## Development
 
+Run `Measure-Clock.ps1` in Windows PowerShell to measure startup and idle resource use. It opens and closes isolated measurement windows and prints JSON. See the [measurement procedure](docs/TESTING.md#measuring-the-windows-baseline).
+
 For interactive review, open `Review.cmd` from a PR checkout. It launches a separate instance that saves preferences in `%LOCALAPPDATA%\JeremiasWorldClock.Review`. Startup and external pet linking are disabled in this mode. Right-click and choose **Greet Jeremias** to try the local mascot animation. Follow the manual steps in [Testing](docs/TESTING.md).
 
 Run `Validate.cmd` or `powershell.exe -NoProfile -STA -File .\Validate.ps1` on Windows. This checks parsing, Win32 helper compilation, WPF markup and DST examples without opening the widget. A Windows CI workflow is included; no CI run has been verified yet.
