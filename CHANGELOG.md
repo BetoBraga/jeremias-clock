@@ -2,6 +2,17 @@
 
 ## Unreleased
 
+
+
+- Added an optional, explicitly refreshed read-only Google Calendar snapshot for Today.
+- Added an offline Activity window, durable meeting conflict checks, and separate pause and cancellation states.
+
+- Added the offline meeting brief contract and scoped-source fixtures; no provider or calendar write is enabled.
+
+
+- Added an offline qualification harness for a future optional OpenClaw meeting-brief pilot. No Gateway access or credentials are enabled.
+
+
 - Added an offline Today panel for searchable notes, meetings and focus blocks.
 
 - Added a repeatable Windows benchmark for first render, idle CPU and memory.

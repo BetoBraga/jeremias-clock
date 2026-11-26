@@ -1,0 +1,211 @@
+{
+  "format": "openbot-policy-oracle-v1",
+  "scenarios": [
+    {
+      "name": "without-opt-in",
+      "steps": [
+        {
+          "action": "submit",
+          "optIn": false,
+          "peer": "p1",
+          "id": "r1",
+          "revision": "v1"
+        }
+      ],
+      "expected": [
+        "disabled"
+      ],
+      "submissions": 0
+    },
+    {
+      "name": "duplicate-and-conflict",
+      "steps": [
+        {
+          "action": "submit",
+          "optIn": true,
+          "peer": "p1",
+          "id": "r1",
+          "revision": "v1"
+        },
+        {
+          "action": "submit",
+          "optIn": true,
+          "peer": "p1",
+          "id": "r1",
+          "revision": "v1"
+        },
+        {
+          "action": "submit",
+          "optIn": true,
+          "peer": "p1",
+          "id": "r1",
+          "revision": "v2"
+        }
+      ],
+      "expected": [
+        "queued",
+        "duplicate",
+        "conflict"
+      ],
+      "submissions": 1
+    },
+    {
+      "name": "peer-isolation",
+      "steps": [
+        {
+          "action": "submit",
+          "optIn": true,
+          "peer": "p1",
+          "id": "r1",
+          "revision": "v1"
+        },
+        {
+          "action": "poll",
+          "peer": "p2",
+          "id": "r1"
+        },
+        {
+          "action": "poll",
+          "peer": "p2",
+          "id": "missing"
+        }
+      ],
+      "expected": [
+        "queued",
+        "not-found",
+        "not-found"
+      ],
+      "submissions": 1
+    },
+    {
+      "name": "timeout-restart",
+      "steps": [
+        {
+          "action": "submit",
+          "optIn": true,
+          "peer": "p1",
+          "id": "r1",
+          "revision": "v1"
+        },
+        {
+          "action": "timeout",
+          "peer": "p1",
+          "id": "r1"
+        },
+        {
+          "action": "restart"
+        },
+        {
+          "action": "poll",
+          "peer": "p1",
+          "id": "r1"
+        },
+        {
+          "action": "submit",
+          "optIn": true,
+          "peer": "p1",
+          "id": "r1",
+          "revision": "v1"
+        },
+        {
+          "action": "cancel",
+          "peer": "p1",
+          "id": "r1"
+        }
+      ],
+      "expected": [
+        "queued",
+        "unknown",
+        "reopened",
+        "unknown",
+        "duplicate",
+        "unsupported"
+      ],
+      "submissions": 1
+    },
+    {
+      "name": "approval-and-stale",
+      "steps": [
+        {
+          "action": "submit",
+          "optIn": true,
+          "peer": "p1",
+          "id": "r1",
+          "revision": "v1"
+        },
+        {
+          "action": "approval",
+          "peer": "p1",
+          "id": "r1"
+        },
+        {
+          "action": "result",
+          "peer": "p1",
+          "id": "r1",
+          "revision": "v2",
+          "result": "synthetic summary"
+        },
+        {
+          "action": "poll",
+          "peer": "p1",
+          "id": "r1"
+        }
+      ],
+      "expected": [
+        "queued",
+        "operator-only",
+        "stale",
+        "queued"
+      ],
+      "submissions": 1
+    },
+    {
+      "name": "result-and-replay",
+      "steps": [
+        {
+          "action": "submit",
+          "optIn": true,
+          "peer": "p1",
+          "id": "r1",
+          "revision": "v1"
+        },
+        {
+          "action": "result",
+          "peer": "p1",
+          "id": "r1",
+          "revision": "v1",
+          "result": "synthetic summary"
+        },
+        {
+          "action": "restart"
+        },
+        {
+          "action": "poll",
+          "peer": "p1",
+          "id": "r1"
+        },
+        {
+          "action": "result",
+          "peer": "p1",
+          "id": "r1",
+          "revision": "v1",
+          "result": "different"
+        },
+        {
+          "action": "poll",
+          "peer": "p1",
+          "id": "r1"
+        }
+      ],
+      "expected": [
+        "queued",
+        "completed",
+        "reopened",
+        "completed",
+        "terminal",
+        "completed"
+      ],
+      "submissions": 1
+    }
+  ]
+}

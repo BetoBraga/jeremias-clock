@@ -21,6 +21,11 @@ try { Add-Type -Path (Join-Path $root 'WindowBridge.cs'); $bridgeAvailable = $tr
 $stateFolder = if ($Review) { 'JeremiasWorldClock.Review' } else { 'JeremiasWorldClock' }
 $stateDir = Join-Path $env:LOCALAPPDATA $stateFolder
 if (-not $MeasureIdleSeconds) { $null = New-Item -ItemType Directory -Force -Path $stateDir }
+$activityPath = Join-Path $stateDir 'activity.json'
+$activityAgendaPath = Join-Path $stateDir 'productivity.json'
+. (Join-Path $PSScriptRoot 'ResponsibilityStore.ps1')
+. (Join-Path $PSScriptRoot 'CalendarActivity.ps1')
+$activityCalendarPath = Join-Path $stateDir 'calendar.json'
 $statePath = Join-Path $stateDir 'settings.json'
 $startupPath = Join-Path ([Environment]::GetFolderPath('Startup')) 'Jeremias World Clock.lnk'
 $brZone = [TimeZoneInfo]::FindSystemTimeZoneById('E. South America Standard Time')
@@ -299,6 +304,17 @@ if (-not $MeasureIdleSeconds) {
         }
     })
     [void]$menu.Items.Add($todayItem)
+    $activityItem = [Windows.Controls.MenuItem]::new()
+    $activityItem.Header = 'Activity'
+    $activityItem.Add_Click({
+        try {
+            . (Join-Path $root 'ActivityPanel.ps1')
+            Show-ActivityPanel -Owner $window -Path $activityPath -AgendaPath $activityAgendaPath -CalendarPath $activityCalendarPath
+        } catch {
+            [void][Windows.MessageBox]::Show($window, $_.Exception.Message, 'Jeremias - Activity')
+        }
+    })
+    [void]$menu.Items.Add($activityItem)
 }
 $startup = New-Object Windows.Controls.MenuItem
 $startup.Header = 'Start with Windows'; $startup.IsCheckable = $true; $startup.IsChecked = (Test-Path $startupPath)
@@ -363,9 +379,20 @@ $blinkTimer.Add_Tick({
     }
 })
 $openTimer.Add_Tick({ $openTimer.Stop(); $controls.Mascot.Source = $normal })
-$window.Add_Closed({ $clockTimer.Stop(); $desktopTimer.Stop(); $blinkTimer.Stop(); $openTimer.Stop(); Save-Settings })
+$activityTimer = [Windows.Threading.DispatcherTimer]::new()
+$activityTimer.Interval = [TimeSpan]::FromMinutes(1)
+$activityTimer.Add_Tick({
+    try { $null = Invoke-JeremiasResponsibilityChecks $activityPath $activityAgendaPath $activityCalendarPath }
+    catch { Write-Verbose ('Local Activity check: ' + $_.Exception.Message) }
+})
+$window.Add_Closed({ $activityTimer.Stop(); $clockTimer.Stop(); $desktopTimer.Stop(); $blinkTimer.Stop(); $openTimer.Stop(); Save-Settings })
 if ($MeasureIdleSeconds) {
     . (Join-Path $root 'ClockBenchmark.ps1')
+}
+if (-not $MeasureIdleSeconds) {
+    try { $null = Invoke-JeremiasResponsibilityChecks $activityPath $activityAgendaPath $activityCalendarPath }
+    catch { Write-Verbose ('Local Activity check: ' + $_.Exception.Message) }
+    $activityTimer.Start()
 }
 Update-Clocks; $clockTimer.Start(); $desktopTimer.Start(); $blinkTimer.Start(); [void]$window.ShowDialog()
 if ($MeasureIdleSeconds) {

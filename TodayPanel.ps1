@@ -23,6 +23,7 @@ function Show-TodayPanel {
             <TextBlock x:Name="LocalDate" Foreground="#A3ACA6" TextWrapping="Wrap"/>
         </StackPanel>
         <StackPanel DockPanel.Dock="Bottom" Margin="0,12,0,0">
+            <TextBlock x:Name="CalendarStatus" Foreground="#B6D5C9" TextWrapping="Wrap"/>
             <TextBlock x:Name="StoreWarning" Foreground="#E9C88D" TextWrapping="Wrap"/>
             <Grid>
                 <Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
@@ -94,11 +95,21 @@ function Show-TodayPanel {
     if ($null -ne $Owner) { $panel.Owner = $Owner }
     # Keep panel state distinct from the clock while both dispatchers' event handlers are active.
     $todayControls = @{}
-    foreach ($name in 'LocalDate','StoreWarning','Status','ShowPast','AgendaList','EntryTitle','EntryKind','EntryStart','EntryEnd','NewEntry','SaveEntry','NoteSearch','NoteList','NoteTitle','NoteText','NewNote','SaveNote') {
+    foreach ($name in 'LocalDate','CalendarStatus','StoreWarning','Status','ShowPast','AgendaList','EntryTitle','EntryKind','EntryStart','EntryEnd','NewEntry','SaveEntry','NoteSearch','NoteList','NoteTitle','NoteText','NewNote','SaveNote') {
         $todayControls[$name] = $panel.FindName($name)
     }
 
     $data = Read-ProductivityStore -Path $Path
+    . (Join-Path $PSScriptRoot 'CalendarConnector.ps1')
+    $todayCalendar = Read-JeremiasCalendarCache -Path (Join-Path (Split-Path -Parent ([IO.Path]::GetFullPath($Path))) 'calendar.json')
+    $todayControls.CalendarStatus.Text = switch ($todayCalendar.Status) {
+        'Disconnected' { '' }
+        'Fresh' { 'Calendar: read-only, refreshed.' }
+        'Stale' { 'Calendar: stale, showing cached events.' }
+        'Offline' { 'Calendar: refresh failed, showing any cached events.' }
+        'Revoked' { 'Calendar: access denied or unavailable; cached events cleared.' }
+        'Unreadable' { 'Calendar: local cache unreadable.' }
+    }
     $todayState = @{ Data = $data; NoteId = $null; EntryId = $null }
     $todayControls.StoreWarning.Text = [string]$data.Warning
     $todayFormat = 'yyyy-MM-dd HH:mm'
@@ -124,7 +135,7 @@ function Show-TodayPanel {
     function Refresh-TodayAgenda {
         $todayControls.AgendaList.Items.Clear()
         $now = [DateTimeOffset]::UtcNow
-        $sorted = $todayState.Data.Entries | Sort-Object { Get-TodayInstant $_.StartUtc }
+        $sorted = (@($todayState.Data.Entries) + @($todayCalendar.Entries)) | Sort-Object { Get-TodayInstant $_.StartUtc }
         foreach ($entry in $sorted) {
             if (-not $todayControls.ShowPast.IsChecked -and (Get-TodayInstant $entry.EndUtc) -le $now) { continue }
             $start = [TimeZoneInfo]::ConvertTime((Get-TodayInstant $entry.StartUtc), $todayZone)
@@ -151,6 +162,7 @@ function Show-TodayPanel {
     }
 
     function Reset-TodayEntry {
+        $todayControls.SaveEntry.IsEnabled = $true
         $todayControls.AgendaList.SelectedIndex = -1
         $todayState.EntryId = $null
         $todayControls.EntryTitle.Clear()
@@ -172,6 +184,16 @@ function Show-TodayPanel {
         $selected = $todayControls.AgendaList.SelectedItem
         if ($null -eq $selected) { return }
         $entry = $selected.Tag
+        if ($entry.ReadOnly) {
+            $todayState.EntryId = $null
+            $todayControls.EntryTitle.Clear()
+            $todayControls.EntryStart.Clear()
+            $todayControls.EntryEnd.Clear()
+            $todayControls.SaveEntry.IsEnabled = $false
+            $todayControls.Status.Text = 'Imported calendar events are read-only.'
+            return
+        }
+        $todayControls.SaveEntry.IsEnabled = $true
         $todayState.EntryId = $entry.Id
         $todayControls.EntryTitle.Text = $entry.Title
         $todayControls.EntryKind.SelectedIndex = if ($entry.Kind -eq 'Focus') { 1 } else { 0 }
