@@ -1,0 +1,66 @@
+<Window xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Jeremias Desktop Pet" Width="440" MinWidth="360" MinHeight="310"
+        Height="510" WindowStartupLocation="CenterScreen" FontFamily="Segoe UI"
+        Background="#101617" Foreground="#EAF4F0">
+ <Window.Resources>
+  <Style TargetType="Button">
+   <Setter Property="Padding" Value="10,5"/><Setter Property="Margin" Value="0,0,6,3"/>
+  </Style>
+  <Style TargetType="ComboBox"><Setter Property="Margin" Value="0,3,0,4"/></Style>
+  <Style TargetType="Expander">
+   <Setter Property="Foreground" Value="#EAF4F0"/><Setter Property="Margin" Value="0,8,0,0"/>
+  </Style>
+ </Window.Resources>
+ <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+  <StackPanel Margin="20">
+   <TextBlock Text="JEREMIAS" Foreground="#8AEFC4" FontSize="13" FontWeight="Bold"/>
+   <TextBlock Text="A little company." FontSize="27" FontWeight="Bold" TextWrapping="Wrap"/>
+   <Image x:Name="Mascot" Width="132" Height="137" Stretch="Uniform" HorizontalAlignment="Left"
+          AutomationProperties.Name="Jeremias, a three-headed dragon" Margin="0,12,0,4"/>
+   <TextBlock x:Name="Mood" Foreground="#BCDBCE" TextWrapping="Wrap" Margin="0,0,0,12"/>
+   <WrapPanel>
+    <Button x:Name="Greet" Content="Say hello"/>
+    <ComboBox x:Name="Personality" MinWidth="115" AutomationProperties.Name="Personality" Margin="0,0,0,3"/>
+   </WrapPanel>
+   <Border x:Name="ClockPanel" Background="#1B2726" Padding="10" Margin="0,8,0,0" Visibility="Collapsed">
+    <StackPanel>
+     <TextBlock Text="WORLD TIME" Foreground="#8AEFC4" FontWeight="Bold"/>
+     <ItemsControl x:Name="ClockRows" Margin="0,3,0,0"/>
+    </StackPanel>
+   </Border>
+   <Expander Header="Clock module (optional)">
+    <StackPanel Margin="0,4,0,2">
+     <TextBlock Text="Choose up to four zones. Leave all slots off to hide the clock." TextWrapping="Wrap"/>
+     <ComboBox x:Name="Zone1" AutomationProperties.Name="Time zone 1"/>
+     <ComboBox x:Name="Zone2" AutomationProperties.Name="Time zone 2"/>
+     <ComboBox x:Name="Zone3" AutomationProperties.Name="Time zone 3"/>
+     <ComboBox x:Name="Zone4" AutomationProperties.Name="Time zone 4"/>
+     <Button x:Name="ApplyZones" Content="Apply clock settings" HorizontalAlignment="Left"/>
+    </StackPanel>
+   </Expander>
+   <Expander Header="Local memory">
+    <StackPanel Margin="0,4,0,2">
+     <TextBlock Text="Only notes you add here. Notes are never commands." TextWrapping="Wrap"/>
+     <TextBox x:Name="NewNote" Margin="0,4,0,2" MaxLength="160" AutomationProperties.Name="New note"/>
+     <WrapPanel>
+      <Button x:Name="Remember" Content="Add note"/>
+      <Button x:Name="Forget" Content="Remove selected"/>
+     </WrapPanel>
+     <ListBox x:Name="Notes" Height="92" ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+              AutomationProperties.Name="Local notes">
+      <ListBox.ItemTemplate><DataTemplate><TextBlock Text="{Binding}" TextWrapping="Wrap"/></DataTemplate></ListBox.ItemTemplate>
+     </ListBox>
+     <CheckBox x:Name="Persist" Content="Save notes to this device"
+               Foreground="#EAF4F0" Margin="0,4,0,3"/>
+     <TextBlock Text="Turning this off removes saved notes from the app's profile." TextWrapping="Wrap" Foreground="#BCDBCE"/>
+    </StackPanel>
+   </Expander>
+   <Expander Header="Capabilities and permissions">
+    <TextBlock Text="Local UI, optional time zones and your notes. No model, remote service, shell, file discovery, native docking or background write is enabled by this pet." TextWrapping="Wrap" Margin="0,4,0,0"/>
+   </Expander>
+   <TextBlock x:Name="Status" Foreground="#F5D8A1" TextWrapping="Wrap" Margin="0,8,0,0"
+              AutomationProperties.LiveSetting="Polite"/>
+  </StackPanel>
+ </ScrollViewer>
+</Window>
