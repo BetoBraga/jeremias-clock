@@ -15,3 +15,5 @@ Jeremias is a friendly three-headed black dragon with green eyes. Preserve the e
 Use Segoe UI for labels and Consolas for clock digits. Keep dates, offsets and time difference legible at minimum size. Keep clocks visually equal and side by side, with the mascot centered. The nominal layout is 440×322 device-independent units. Preserve aspect ratio when resizing; test 100%, 150% and 200% Windows DPI. Distinguish preview mode by both label and color. Avoid stealing focus. Keep motion subtle, and consider a reduce-motion setting in a future change.
 
 The icon is a multi-resolution ICO; keep its silhouette and green hands recognizable at 16/32 pixels. Use supplied artwork rather than replacing the character's identity without review. Test clipping and contrast when changing English copy.
+
+The context menu uses a text action for **Greet Jeremias**. The sprite moves briefly and returns to its original position. A text response provides the same feedback with Windows animations disabled. Automatic blinking follows the same Windows animation preference.
